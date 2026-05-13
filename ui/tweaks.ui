@@ -111,6 +111,57 @@
             </child>
           </object>
         </child>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="yes">Hover Interpolation</property>
+            <property name="subtitle" translatable="yes">Set hover animation interpolation.</property>
+            <property name="activatable-widget">animation-interpolation</property>
+            <child>
+              <object class="GtkDropDown" id="animation-interpolation">
+                <property name="valign">center</property>
+                <property name="model">animation-interpolation-model</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="yes">Spring Duration</property>
+            <property name="subtitle" translatable="yes">Set hover spring duration.</property>
+            <property name="activatable-widget">animation-spring-duration</property>
+            <child>
+              <object class="GtkScale" id="animation-spring-duration">
+                <property name="valign">center</property>
+                <property name="hexpand">true</property>
+                <property name="width-request">140px</property>
+                <property name="draw-value">true</property>
+                <property name="value-pos">right</property>
+                <property name="orientation">horizontal</property>
+                <property name="digits">2</property>
+                <property name="adjustment">animation-spring-duration-adjust</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="yes">Spring Bounce</property>
+            <property name="subtitle" translatable="yes">Set hover spring bounce.</property>
+            <property name="activatable-widget">animation-spring-bounce</property>
+            <child>
+              <object class="GtkScale" id="animation-spring-bounce">
+                <property name="valign">center</property>
+                <property name="hexpand">true</property>
+                <property name="width-request">140px</property>
+                <property name="draw-value">true</property>
+                <property name="value-pos">right</property>
+                <property name="orientation">horizontal</property>
+                <property name="digits">2</property>
+                <property name="adjustment">animation-spring-bounce-adjust</property>
+              </object>
+            </child>
+          </object>
+        </child>
         
         <child>
           <object class="AdwActionRow">
@@ -313,6 +364,12 @@
       <item translatable="yes">x3</item>
     </items>
   </object>
+  <object class="GtkStringList" id="animation-interpolation-model">
+    <items>
+      <item translatable="yes">Regular</item>
+      <item translatable="yes">Spring</item>
+    </items>
+  </object>
   
   <object class="GtkStringList" id="icon-resolution-model">
     <items>
@@ -370,6 +427,16 @@
     <property name="step-increment">0.01</property>
   </object>
   <object class="GtkAdjustment" id="animation-bounce-height-adjust">
+    <property name="lower">0.0</property>
+    <property name="upper">1.0</property>
+    <property name="step-increment">0.01</property>
+  </object>
+  <object class="GtkAdjustment" id="animation-spring-duration-adjust">
+    <property name="lower">0.12</property>
+    <property name="upper">1.20</property>
+    <property name="step-increment">0.01</property>
+  </object>
+  <object class="GtkAdjustment" id="animation-spring-bounce-adjust">
     <property name="lower">0.0</property>
     <property name="upper">1.0</property>
     <property name="step-increment">0.01</property>

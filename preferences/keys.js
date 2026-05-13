@@ -236,6 +236,21 @@ export const SettingsKeys = () => {
       widget_type: 'dropdown',
       test: { values: [0, 1, 2, 3] },
     },
+    'animation-interpolation': {
+      default_value: 0,
+      widget_type: 'dropdown',
+      test: { values: [0, 1] },
+    },
+    'animation-spring-duration': {
+      default_value: 0.35,
+      widget_type: 'scale',
+      test: { pointer: 'slide-through', values: [0.2, 0.35, 0.7] },
+    },
+    'animation-spring-bounce': {
+      default_value: 0.25,
+      widget_type: 'scale',
+      test: { pointer: 'slide-through', values: [0, 0.25, 0.7] },
+    },
     'items-pullout-angle': {
       default_value: 0,
       widget_type: 'scale',
@@ -272,6 +287,11 @@ export const SettingsKeys = () => {
       test: { values: [-1, 0, 1] },
     },
     'border-radius': {
+      default_value: 0,
+      widget_type: 'scale',
+      themed: true,
+    },
+    'corner-smoothing': {
       default_value: 0,
       widget_type: 'scale',
       themed: true,

@@ -21,6 +21,7 @@ import {
 } from 'resource:///org/gnome/shell/ui/dash.js';
 
 import { DockPosition } from './dock.js';
+import { CornerEffect } from './effects/corner_effect.js';
 
 class DockItemMenu extends PopupMenu.PopupMenu {
   constructor(sourceActor, side = St.Side.TOP, params = {}) {
@@ -329,10 +330,27 @@ export const DockItemContainer = GObject.registerClass(
 export const DockBackground = GObject.registerClass(
   {},
   class DockBackground extends St.Widget {
-    _init(params) {
+    _init(params = {}) {
+      let extension = params.extension;
+      delete params.extension;
+
       super._init({
         name: 'DockBackground',
         ...(params || {}),
+      });
+
+      this._cornerEffect = new CornerEffect({
+        extensionDir: extension ? extension.path : null,
+      });
+      this.add_effect_with_name('corner-effect', this._cornerEffect);
+    }
+
+    _updateCornerEffect(dock) {
+      this._cornerEffect.update({
+        radius: dock.extension.computed_border_radius || 0,
+        smoothing: dock.extension.corner_smoothing || 0,
+        width: this.width,
+        height: this.height,
       });
     }
 
@@ -417,6 +435,7 @@ export const DockBackground = GObject.registerClass(
 
         this.opacity = 255;
         dock.dash.opacity = this.opacity;
+        this._updateCornerEffect(dock);
       }
     }
   }

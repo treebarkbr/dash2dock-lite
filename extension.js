@@ -505,6 +505,9 @@ export default class Dash2DockLiteExt extends Extension {
         case 'animation-spread':
         case 'animation-rise':
         case 'animation-rise-curve':
+        case 'animation-interpolation':
+        case 'animation-spring-duration':
+        case 'animation-spring-bounce':
         case 'animation-bounce-height': {
           if (this.animate_icons) {
             this.animate({ preview: true });
@@ -595,6 +598,7 @@ export default class Dash2DockLiteExt extends Extension {
           break;
         }
         case 'border-radius':
+        case 'corner-smoothing':
           this._debouncedUpdateStyle();
           this.animate();
           break;
@@ -1013,7 +1017,7 @@ export default class Dash2DockLiteExt extends Extension {
       if (this.panel_mode) {
         r = 0;
       }
-      ss.push(`border-radius: ${r}px;`);
+      ss.push(`border-radius: ${this.corner_smoothing > 0 ? 0 : r}px;`);
       this.computed_border_radius = r;
       let rgba = this._style.rgba(this.background_color);
       ss.push(`background: rgba(${rgba});`);

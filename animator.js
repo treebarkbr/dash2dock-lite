@@ -25,14 +25,62 @@ import {
   isOverlapRect,
 } from './utils.js';
 
-const ANIM_POSITION_PER_SEC = 550 / 1000;
-const ANIM_SIZE_PER_SEC = 250 / 1000;
 const ANIM_ICON_RAISE = 0.5;
 const ANIM_ICON_SCALE = 1.5;
 const ANIM_ICON_HIT_AREA = 2.5;
 const ANIMATE_CACHE_LOOKUP = 4;
+const ANIM_POSITION_PER_SEC = 550 / 1000;
+const ANIM_SIZE_PER_SEC = 250 / 1000;
+const SPRING_SIZE_FREQUENCY_MULTIPLIER = 1.15;
+const SPRING_REST_THRESHOLD = 0.01;
 
 const DOT_CANVAS_SIZE = 96;
+
+function stepSpring(current, target, velocity, dt, frequency, damping) {
+  let step = Math.min(dt, 64) / 1000;
+  let omega = 2 * Math.PI * frequency;
+  let offset = current - target;
+  let decay = Math.exp(-damping * omega * step);
+  let dampedOmega = omega * Math.sqrt(1 - damping * damping);
+  let angle = dampedOmega * step;
+  let sin = Math.sin(angle);
+  let cos = Math.cos(angle);
+  let dampingRatio = (damping * omega) / dampedOmega;
+  let newOffset =
+    decay *
+    (offset * cos +
+      ((velocity + damping * omega * offset) * sin) / dampedOmega);
+  let newVelocity =
+    decay *
+    (velocity * (cos - dampingRatio * sin) -
+      offset * ((omega * omega) / dampedOmega) * sin);
+
+  current = target + newOffset;
+  velocity = newVelocity;
+
+  if (
+    Math.abs(target - current) < SPRING_REST_THRESHOLD &&
+    Math.abs(velocity) < SPRING_REST_THRESHOLD
+  ) {
+    current = target;
+    velocity = 0;
+  }
+
+  return [current, velocity];
+}
+
+function getSpringConfig(dock) {
+  let duration = dock.extension.animation_spring_duration || 0.35;
+  let bounce = dock.extension.animation_spring_bounce || 0;
+
+  duration = Math.max(0.12, Math.min(1.2, duration));
+  bounce = Math.max(0, Math.min(1, bounce));
+
+  return {
+    frequency: 1.5 / duration,
+    damping: Math.max(0.2, Math.min(0.999, 1 - bounce * 0.75)),
+  };
+}
 
 export let Animator = class {
   enable() {
@@ -459,7 +507,27 @@ export let Animator = class {
       //-------------------
       // animate position
       //-------------------
-      {
+      if (dock.extension.animation_interpolation == 1) {
+        let spring = getSpringConfig(dock);
+        let frequency = spring.frequency * slowDown;
+        [translationX, icon._springTranslationVelocityX] = stepSpring(
+          icon._icon.translationX,
+          translationX,
+          icon._springTranslationVelocityX || 0,
+          dt,
+          frequency,
+          spring.damping
+        );
+        [translationY, icon._springTranslationVelocityY] = stepSpring(
+          icon._icon.translationY,
+          translationY,
+          icon._springTranslationVelocityY || 0,
+          dt,
+          frequency,
+          spring.damping
+        );
+        icon._deltaVector = new Vector([translationX, translationY, 0]);
+      } else {
         let speed = ANIM_POSITION_PER_SEC * slowDown;
         let targetPosition = new Vector([translationX, translationY, 0]);
         let currentPosition = new Vector([
@@ -481,6 +549,8 @@ export let Animator = class {
         translationX = appliedVector.x;
         translationY = appliedVector.y;
         icon._deltaVector = appliedVector;
+        icon._springTranslationVelocityX = 0;
+        icon._springTranslationVelocityY = 0;
       }
 
       // fix jitterness
@@ -639,7 +709,25 @@ export let Animator = class {
         let unscaledIconSize = dock._iconSizeScaledDown * scaleFactor;
         let targetSize = unscaledIconSize * icon._targetScale;
         let currentSize = renderer.icon_size * renderer.scaleX;
-        {
+        if (dock.extension.animation_interpolation == 1) {
+          let spring = getSpringConfig(dock);
+          let frequency =
+            spring.frequency * SPRING_SIZE_FREQUENCY_MULTIPLIER * slowDown;
+          let sizeVelocity = renderer._springSizeVelocity || 0;
+          let nextSize;
+          [nextSize, sizeVelocity] = stepSpring(
+            currentSize,
+            targetSize,
+            sizeVelocity,
+            dt,
+            frequency,
+            spring.damping
+          );
+          renderer._springSizeVelocity = sizeVelocity;
+          icon._deltaSize = nextSize - currentSize;
+          targetSize = nextSize;
+          icon._targetSize = targetSize;
+        } else {
           let dst = targetSize - currentSize;
           let mag = Math.abs(dst);
           let dir = Math.sign(dst);
@@ -654,6 +742,7 @@ export let Animator = class {
           targetSize = currentSize + appliedSize;
           icon._deltaSize = appliedSize;
           icon._targetSize = targetSize;
+          renderer._springSizeVelocity = 0;
         }
         // compute icon scale based on size
         icon._scale = targetSize / unscaledIconSize;

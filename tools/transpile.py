@@ -55,6 +55,7 @@ importMap = [
     [ "import { Bounce, Linear }", "const { Bounce, Linear } = Me.imports.effects.easing;" ],
     [ "import { MonochromeEffect }", "const MonochromeEffect = Me.imports.effects.monochrome_effect.MonochromeEffect;" ],
     [ "import { BlurEffect }", "const BlurEffect = Me.imports.effects.blur_effect.BlurEffect;" ],
+    [ "import { CornerEffect }", "const CornerEffect = Me.imports.effects.corner_effect.CornerEffect;" ],
     [ "import { TintEffect }", "const TintEffect = Me.imports.effects.tint_effect.TintEffect;" ],
     [ "import { Clock }", "const Clock = Me.imports.apps.clock.Clock;" ],
     [ "import { Calendar }", "const Calendar = Me.imports.apps.calendar.Calendar;" ],

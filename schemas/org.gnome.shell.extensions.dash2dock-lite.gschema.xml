@@ -141,6 +141,11 @@
         <summary>Border radius</summary>
         <description>Set dash background border radius.</description>
     </key>
+    <key type="d" name="corner-smoothing">
+        <default>0</default>
+        <summary>Corner smoothing</summary>
+        <description>Set dash background corner smoothing.</description>
+    </key>
     <key type="(dddd)" name="border-color">
         <default>(1.,1.,1.,1.)</default>
         <summary>border color</summary>
@@ -270,6 +275,21 @@
         <default>0</default>
         <summary>Animation type</summary>
         <description>Animation type.</description>
+    </key>
+    <key type="i" name="animation-interpolation">
+        <default>0</default>
+        <summary>Animation interpolation</summary>
+        <description>Set icon hover interpolation.</description>
+    </key>
+    <key type="d" name="animation-spring-duration">
+        <default>0.35</default>
+        <summary>Spring duration</summary>
+        <description>Set spring animation duration.</description>
+    </key>
+    <key type="d" name="animation-spring-bounce">
+        <default>0.25</default>
+        <summary>Spring bounce</summary>
+        <description>Set spring animation bounce.</description>
     </key>
     <key type="d" name="animation-spread">
         <default>0.75</default>
