@@ -113,6 +113,19 @@
         </child>
         <child>
           <object class="AdwActionRow">
+            <property name="title" translatable="yes">Bounce Trajectory</property>
+            <property name="subtitle" translatable="yes">Set icons bounce trajectory when clicked and animated.</property>
+            <property name="activatable-widget">animation-bounce-trajectory</property>
+            <child>
+              <object class="GtkDropDown" id="animation-bounce-trajectory">
+                <property name="valign">center</property>
+                <property name="model">animation-bounce-trajectory-model</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow">
             <property name="title" translatable="yes">Hover Interpolation</property>
             <property name="subtitle" translatable="yes">Set hover animation interpolation.</property>
             <property name="activatable-widget">animation-interpolation</property>
@@ -362,6 +375,12 @@
       <item translatable="yes">x1</item>
       <item translatable="yes">x2</item>
       <item translatable="yes">x3</item>
+    </items>
+  </object>
+  <object class="GtkStringList" id="animation-bounce-trajectory-model">
+    <items>
+      <item translatable="yes">Original</item>
+      <item translatable="yes">Refined</item>
     </items>
   </object>
   <object class="GtkStringList" id="animation-interpolation-model">

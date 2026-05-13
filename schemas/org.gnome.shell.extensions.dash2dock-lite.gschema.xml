@@ -316,6 +316,11 @@
         <summary>Icons bounce frequency</summary>
         <description>Icon bounce frequency when clicked.</description>
     </key>
+    <key type="i" name="animation-bounce-trajectory">
+        <default>0</default>
+        <summary>Icons bounce trajectory</summary>
+        <description>Icon bounce trajectory when clicked.</description>
+    </key>
     <key type="d" name="items-pullout-angle">
         <default>0.5</default>
         <summary>Items angle</summary>
@@ -375,6 +380,11 @@
         <default>0</default>
         <summary>Running window indicator size</summary>
         <description>Customize the running window indicator size.</description>
+    </key>
+    <key type="d" name="running-indicator-padding">
+        <default>0.5</default>
+        <summary>Running window indicator padding</summary>
+        <description>Set the distance between icons and running window indicators.</description>
     </key>
     <key type="(dddd)" name="running-indicator-color">
         <default>(1.,1.,1.,1.)</default>

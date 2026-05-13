@@ -508,7 +508,9 @@ export default class Dash2DockLiteExt extends Extension {
         case 'animation-interpolation':
         case 'animation-spring-duration':
         case 'animation-spring-bounce':
-        case 'animation-bounce-height': {
+        case 'animation-bounce-height':
+        case 'animation-bounce-frequency':
+        case 'animation-bounce-trajectory': {
           if (this.animate_icons) {
             this.animate({ preview: true });
           }
@@ -518,6 +520,7 @@ export default class Dash2DockLiteExt extends Extension {
         case 'notification-badge-color':
         case 'notification-badge-style':
         case 'running-indicator-size':
+        case 'running-indicator-padding':
         case 'running-indicator-color':
         case 'running-indicator-style': {
           this.animate();
@@ -600,6 +603,7 @@ export default class Dash2DockLiteExt extends Extension {
         case 'border-radius':
         case 'corner-smoothing':
           this._debouncedUpdateStyle();
+          this._updateLayout();
           this.animate();
           break;
         case 'separator-thickness':
@@ -952,7 +956,7 @@ export default class Dash2DockLiteExt extends Extension {
     this.animationInterval =
       ANIM_INTERVAL + (this.animation_fps || 0) * ANIM_INTERVAL_PAD;
     this._hiTimer.shutdown();
-    this._hiTimer.initialize(this.animationInterval);
+    this._hiTimer.initialize(ANIM_INTERVAL);
   }
 
   _updateShrink(disable) {

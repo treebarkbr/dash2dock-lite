@@ -100,8 +100,9 @@ export const DockItemDotsOverlay = GObject.registerClass(
       canvasScale *= scale;
       renderer._canvas.set_scale(canvasScale, canvasScale);
 
+      let indicatorPadding = extension.running_indicator_padding ?? 0.5;
       let offsetX = 0;
-      let offsetY = renderer.height * 0.125 * scale;
+      let offsetY = renderer.height * (0.05 + indicatorPadding * 0.15) * scale;
       if (vertical) {
         offsetX = -offsetY;
         if (position == DockPosition.RIGHT) {

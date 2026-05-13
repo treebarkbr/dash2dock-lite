@@ -45,6 +45,11 @@ export const DockAlignment = {
 
 const PREVIEW_FRAMES = 64;
 const ANIM_DEBOUNCE_END_DELAY = 750;
+const ADAPTIVE_ANIM_INTERVAL_HIGH = 15;
+const ADAPTIVE_ANIM_INTERVAL_MEDIUM = 30;
+const ADAPTIVE_ANIM_INTERVAL_LOW = 45;
+const ADAPTIVE_SPRING_HIGH_MOTION = 2.0;
+const ADAPTIVE_SPRING_MEDIUM_MOTION = 0.35;
 
 const MIN_SCROLL_RESOLUTION = 4;
 const MAX_SCROLL_RESOLUTION = 10;
@@ -1182,7 +1187,7 @@ export let Dock = GObject.registerClass(
       }
 
       //! add layout here instead of at the
-      this.animator.animate(dt);
+      let animationState = this.animator.animate(dt);
 
       // hack to mitigate jerkiness when a new icon is inserted
       if (!this._pauseBounce || this._pauseBounce <= 0) {
@@ -1196,6 +1201,8 @@ export let Dock = GObject.registerClass(
       if (this._pauseBounce && this._pauseBounce > 0) {
         this._pauseBounce -= dt;
       }
+
+      return animationState;
     }
 
     //! move these generic functions outside of this class
@@ -1231,17 +1238,56 @@ export let Dock = GObject.registerClass(
       this.animationInterval = this.extension.animationInterval;
       if (this.extension._hiTimer) {
         if (!this._animationSeq) {
-          this._animationSeq = this.extension._hiTimer.runLoop(
-            (s) => {
-              this.animate(s._delay);
+          this._animationSeq = this.extension._hiTimer.runLoop({
+            _name: 'animationTimer',
+            _delay: this.animationInterval,
+            _time: 0,
+            onUpdate: (s, dt) => {
+              s._time += dt;
+              if (s._time < s._delay) {
+                return;
+              }
+
+              let elapsed = s._time;
+              s._time = 0;
+              let animationState = this.animate(elapsed);
+              s._delay = this._getAdaptiveAnimationInterval(animationState);
             },
-            this.animationInterval,
-            'animationTimer'
-          );
+          });
         } else {
+          this._animationSeq._delay = this.animationInterval;
+          this._animationSeq._time = 0;
           this.extension._hiTimer.runLoop(this._animationSeq);
         }
       }
+    }
+
+    _getAdaptiveAnimationInterval(animationState) {
+      if (this.extension.animation_interpolation != 1) {
+        return this.animationInterval;
+      }
+
+      let minInterval = this.animationInterval;
+      let interval = ADAPTIVE_ANIM_INTERVAL_LOW;
+      let motion = Math.max(
+        animationState?.springMotion || 0,
+        animationState?.springPrediction || 0
+      );
+
+      if (
+        animationState?.didFadeIn ||
+        animationState?.didBounce ||
+        motion >= ADAPTIVE_SPRING_HIGH_MOTION
+      ) {
+        interval = ADAPTIVE_ANIM_INTERVAL_HIGH;
+      } else if (
+        animationState?.didScale ||
+        motion >= ADAPTIVE_SPRING_MEDIUM_MOTION
+      ) {
+        interval = ADAPTIVE_ANIM_INTERVAL_MEDIUM;
+      }
+
+      return Math.max(minInterval, interval);
     }
 
     _endAnimation() {

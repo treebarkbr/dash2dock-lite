@@ -33,6 +33,7 @@ const ANIM_POSITION_PER_SEC = 550 / 1000;
 const ANIM_SIZE_PER_SEC = 250 / 1000;
 const SPRING_SIZE_FREQUENCY_MULTIPLIER = 1.15;
 const SPRING_REST_THRESHOLD = 0.01;
+const SPRING_LOOKAHEAD_MS = 90;
 
 const DOT_CANVAS_SIZE = 96;
 
@@ -80,6 +81,31 @@ function getSpringConfig(dock) {
     frequency: 1.5 / duration,
     damping: Math.max(0.2, Math.min(0.999, 1 - bounce * 0.75)),
   };
+}
+
+function predictSpringMotion(current, target, velocity) {
+  return (
+    Math.abs(target - current) +
+    Math.abs(velocity) * (SPRING_LOOKAHEAD_MS / 1000)
+  );
+}
+
+function refinedBounceOffset(time, duration, travel) {
+  let progress = Math.max(0, Math.min(1, time / duration));
+  let arcs = [
+    [0, 0.58, 1],
+    [0.58, 0.84, 0.32],
+    [0.84, 1, 0.12],
+  ];
+
+  for (let [start, end, height] of arcs) {
+    if (progress >= start && progress <= end) {
+      let local = (progress - start) / (end - start);
+      return travel * height * Math.sin(Math.PI * local);
+    }
+  }
+
+  return 0;
 }
 
 export let Animator = class {
@@ -288,6 +314,8 @@ export let Animator = class {
 
     let didScale = false;
     let didBounce = false;
+    let springMotion = 0;
+    let springPrediction = 0;
 
     //------------------------
     // animation behavior
@@ -510,8 +538,10 @@ export let Animator = class {
       if (dock.extension.animation_interpolation == 1) {
         let spring = getSpringConfig(dock);
         let frequency = spring.frequency * slowDown;
+        let currentTranslationX = icon._icon.translationX;
+        let currentTranslationY = icon._icon.translationY;
         [translationX, icon._springTranslationVelocityX] = stepSpring(
-          icon._icon.translationX,
+          currentTranslationX,
           translationX,
           icon._springTranslationVelocityX || 0,
           dt,
@@ -519,12 +549,30 @@ export let Animator = class {
           spring.damping
         );
         [translationY, icon._springTranslationVelocityY] = stepSpring(
-          icon._icon.translationY,
+          currentTranslationY,
           translationY,
           icon._springTranslationVelocityY || 0,
           dt,
           frequency,
           spring.damping
+        );
+        springMotion = Math.max(
+          springMotion,
+          Math.abs(translationX - currentTranslationX),
+          Math.abs(translationY - currentTranslationY)
+        );
+        springPrediction = Math.max(
+          springPrediction,
+          predictSpringMotion(
+            translationX,
+            icon._translate,
+            icon._springTranslationVelocityX || 0
+          ),
+          predictSpringMotion(
+            translationY,
+            icon._translateRise * rdir,
+            icon._springTranslationVelocityY || 0
+          )
         );
         icon._deltaVector = new Vector([translationX, translationY, 0]);
       } else {
@@ -725,6 +773,15 @@ export let Animator = class {
           );
           renderer._springSizeVelocity = sizeVelocity;
           icon._deltaSize = nextSize - currentSize;
+          springMotion = Math.max(springMotion, Math.abs(icon._deltaSize));
+          springPrediction = Math.max(
+            springPrediction,
+            predictSpringMotion(
+              nextSize,
+              unscaledIconSize * icon._targetScale,
+              sizeVelocity
+            )
+          );
           targetSize = nextSize;
           icon._targetSize = targetSize;
         } else {
@@ -1164,12 +1221,25 @@ export let Animator = class {
       didScale = true;
     }
 
-    if (didFadeIn || didScale || dock._dragging || didBounce) {
+    let springActive =
+      dock.extension.animation_interpolation == 1 &&
+      (springMotion > SPRING_REST_THRESHOLD ||
+        springPrediction > SPRING_REST_THRESHOLD);
+
+    if (didFadeIn || didScale || dock._dragging || didBounce || springActive) {
       dock.autohider._debounceCheckHide();
       dock._debounceEndAnimation();
     }
 
     dock.extension.integrations.bms_update_size(this);
+
+    return {
+      didBounce,
+      didFadeIn,
+      didScale,
+      springMotion,
+      springPrediction,
+    };
   }
 
   bounceIcon(appwell) {
@@ -1199,12 +1269,15 @@ export let Animator = class {
     const translateDecor = (container, appwell) => {
       if (!container._icon) return;
       if (container._renderer) {
+        container._renderer.translationX = appwell.translationX;
         container._renderer.translationY = appwell.translationY;
       }
       if (container._image) {
+        container._image.translationX = appwell.translationX;
         container._image.translationY = appwell.translationY;
       }
       if (container._badge) {
+        container._badge.translationX = appwell.translationX;
         container._badge.translationY = appwell.translationY;
       }
       if (container._label) {
@@ -1212,55 +1285,56 @@ export let Animator = class {
       }
     };
 
+    const applyBounceOffset = (container, appwell, res) => {
+      if (dock.isVertical()) {
+        appwell.translation_x =
+          dock._position == DockPosition.LEFT ? res : -res;
+        appwell.translation_y = 0;
+      } else {
+        appwell.translation_x = 0;
+        appwell.translation_y =
+          dock._position == DockPosition.BOTTOM ? -res : res;
+      }
+      translateDecor(container, appwell);
+    };
+
     let t = 250;
-    let _frames = [
-      {
-        _duration: t,
-        _func: (f, s) => {
-          let res = Linear.easeNone(f._time, 0, travel, f._duration);
-          let [container, appwell] = getTarget(app_id);
-          if (!appwell) return;
-          appwell._bounce = true;
-          if (dock.isVertical()) {
-            appwell.translation_x =
-              dock._position == DockPosition.LEFT ? res : -res;
-            if (container._renderer) {
-              container._renderer.translationX = appwell.translationX;
-            }
-          } else {
-            appwell.translation_y =
-              dock._position == DockPosition.BOTTOM ? -res : res;
-            if (container._renderer) {
-              container._renderer.translationY = appwell.translationY;
-            }
-          }
-          translateDecor(container, appwell);
-        },
-      },
-      {
-        _duration: t * 3,
-        _func: (f, s) => {
-          let res = Bounce.easeOut(f._time, travel, -travel, f._duration);
-          let [container, appwell] = getTarget(app_id);
-          if (!appwell) return;
-          appwell._bounce = true;
-          if (dock.isVertical()) {
-            appwell.translation_x = appwell.translation_x =
-              dock._position == DockPosition.LEFT ? res : -res;
-            if (container._renderer) {
-              container._renderer.translationX = appwell.translationX;
-            }
-          } else {
-            appwell.translation_y =
-              dock._position == DockPosition.BOTTOM ? -res : res;
-            if (container._renderer) {
-              container._renderer.translationY = appwell.translationY;
-            }
-          }
-          translateDecor(container, appwell);
-        },
-      },
-    ];
+    let useRefinedBounce = dock.extension.animation_bounce_trajectory == 1;
+    let _frames = useRefinedBounce
+      ? [
+          {
+            _duration: t * 4,
+            _func: (f, s) => {
+              let res = refinedBounceOffset(f._time, f._duration, travel);
+              let [container, appwell] = getTarget(app_id);
+              if (!appwell) return;
+              appwell._bounce = true;
+              applyBounceOffset(container, appwell, res);
+            },
+          },
+        ]
+      : [
+          {
+            _duration: t,
+            _func: (f, s) => {
+              let res = Linear.easeNone(f._time, 0, travel, f._duration);
+              let [container, appwell] = getTarget(app_id);
+              if (!appwell) return;
+              appwell._bounce = true;
+              applyBounceOffset(container, appwell, res);
+            },
+          },
+          {
+            _duration: t * 3,
+            _func: (f, s) => {
+              let res = Bounce.easeOut(f._time, travel, -travel, f._duration);
+              let [container, appwell] = getTarget(app_id);
+              if (!appwell) return;
+              appwell._bounce = true;
+              applyBounceOffset(container, appwell, res);
+            },
+          },
+        ];
 
     let frames = [];
     for (
@@ -1282,17 +1356,10 @@ export let Animator = class {
         _func: (f, s) => {
           let [container, appwell] = getTarget(app_id);
           if (!appwell) return;
-          appwell._bounce = true;
+          appwell._bounce = false;
+          appwell.translation_x = 0;
           appwell.translation_y = 0;
           translateDecor(container, appwell);
-        },
-      },
-      {
-        _duration: 10,
-        _func: (f, s) => {
-          let [container, appwell] = getTarget(app_id);
-          if (!appwell) return;
-          appwell._bounce = false;
         },
       },
     ]);

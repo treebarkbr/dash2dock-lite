@@ -236,6 +236,11 @@ export const SettingsKeys = () => {
       widget_type: 'dropdown',
       test: { values: [0, 1, 2, 3] },
     },
+    'animation-bounce-trajectory': {
+      default_value: 0,
+      widget_type: 'dropdown',
+      test: { values: [0, 1] },
+    },
     'animation-interpolation': {
       default_value: 0,
       widget_type: 'dropdown',
@@ -354,6 +359,10 @@ export const SettingsKeys = () => {
     'running-indicator-size': {
       default_value: 0,
       widget_type: 'dropdown',
+    },
+    'running-indicator-padding': {
+      default_value: 0.5,
+      widget_type: 'scale',
     },
     'running-indicator-style': {
       default_value: 0,
