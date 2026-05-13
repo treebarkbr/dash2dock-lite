@@ -15,6 +15,7 @@ import { Dash } from 'resource:///org/gnome/shell/ui/dash.js';
 
 import { TintEffect } from './effects/tint_effect.js';
 import { MonochromeEffect } from './effects/monochrome_effect.js';
+import { SmoothCornersEffect } from './effects/smooth_corners_effect.js';
 
 import { DockIcon, DockItemContainer, DockBackground } from './dockItems.js';
 import { DockItemList } from './dockItemMenu.js';
@@ -73,6 +74,12 @@ export let Dock = GObject.registerClass(
       this._monitorIndex = Main.layoutManager.primaryIndex;
 
       this._background = new DockBackground({ name: 'd2daBackground' });
+      this._background._cornerEffect = new SmoothCornersEffect();
+      this._background._cornerEffect.preload(this.extension.path);
+      this._background.add_effect_with_name(
+        'smooth-corners',
+        this._background._cornerEffect
+      );
       this.add_child(this._background);
 
       // for blur-my-shell

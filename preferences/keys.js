@@ -291,6 +291,11 @@ export const SettingsKeys = () => {
       widget_type: 'scale',
       themed: true,
     },
+    'border-smoothing': {
+      default_value: 0,
+      widget_type: 'scale',
+      themed: true,
+    },
     'border-thickness': {
       default_value: 0,
       widget_type: 'dropdown',

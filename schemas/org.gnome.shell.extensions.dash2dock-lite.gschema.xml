@@ -141,6 +141,11 @@
         <summary>Border radius</summary>
         <description>Set dash background border radius.</description>
     </key>
+    <key type="d" name="border-smoothing">
+        <default>0</default>
+        <summary>Corner smoothing</summary>
+        <description>Use superellipse-like smoothing for dock background corners.</description>
+    </key>
     <key type="(dddd)" name="border-color">
         <default>(1.,1.,1.,1.)</default>
         <summary>border color</summary>

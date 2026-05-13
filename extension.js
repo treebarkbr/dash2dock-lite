@@ -598,6 +598,7 @@ export default class Dash2DockLiteExt extends Extension {
           break;
         }
         case 'border-radius':
+        case 'border-smoothing':
           this._debouncedUpdateStyle();
           this.animate();
           break;
@@ -1016,8 +1017,15 @@ export default class Dash2DockLiteExt extends Extension {
       if (this.panel_mode) {
         r = 0;
       }
-      ss.push(`border-radius: ${r}px;`);
+      if ((this.border_smoothing || 0) > 0 && r > 0 && !this.panel_mode) {
+        // The shader effect clips the smoothed corners, so the CSS fallback
+        // should stay square to avoid double-rounding.
+        ss.push('border-radius: 0px;');
+      } else {
+        ss.push(`border-radius: ${r}px;`);
+      }
       this.computed_border_radius = r;
+      this.computed_border_smoothing = this.border_smoothing || 0;
       let rgba = this._style.rgba(this.background_color);
       ss.push(`background: rgba(${rgba});`);
       styles.push(`#d2daBackground { ${ss.join(' ')}}`);

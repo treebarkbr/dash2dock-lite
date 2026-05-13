@@ -352,11 +352,15 @@ export const DockBackground = GObject.registerClass(
 
       if (!first || !last || first == last) {
         this.opacity = 0;
+        this._cornerEffect?.update({ enabled: false });
         return;
       }
 
       let dp = dock.dash.get_transformed_position();
-      if (isNaN(dp[0]) || isNaN(dp[1])) return;
+      if (isNaN(dp[0]) || isNaN(dp[1])) {
+        this._cornerEffect?.update({ enabled: false });
+        return;
+      }
 
       let padding =
         iconSize * 0.1 * (dock.extension.dock_padding || 0) * scaleFactor;
@@ -397,6 +401,19 @@ export const DockBackground = GObject.registerClass(
         this.x -= dock.x;
         this.y -= dock.y;
         this._padding = padding;
+
+        if (this._cornerEffect) {
+          this._cornerEffect.update({
+            width: this.width,
+            height: this.height,
+            radius: dock.extension.computed_border_radius || 0,
+            smoothing: dock.extension.computed_border_smoothing || 0,
+            enabled:
+              !dock.extension.panel_mode &&
+              (dock.extension.computed_border_radius || 0) > 0 &&
+              (dock.extension.computed_border_smoothing || 0) > 0,
+          });
+        }
 
         // adjust padding
         let az = -padding;
