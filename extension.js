@@ -504,6 +504,9 @@ export default class Dash2DockLiteExt extends Extension {
         case 'animation-magnify':
         case 'animation-spread':
         case 'animation-rise':
+        case 'animation-spring':
+        case 'animation-spring-stiffness':
+        case 'animation-spring-damping':
         case 'animation-rise-curve':
         case 'animation-bounce-height': {
           if (this.animate_icons) {

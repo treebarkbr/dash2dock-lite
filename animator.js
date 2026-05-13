@@ -31,6 +31,7 @@ const ANIM_ICON_RAISE = 0.5;
 const ANIM_ICON_SCALE = 1.5;
 const ANIM_ICON_HIT_AREA = 2.5;
 const ANIMATE_CACHE_LOOKUP = 4;
+const ANIM_SPRING_MAX_TIMESTEP = 1 / 60;
 
 const DOT_CANVAS_SIZE = 96;
 
@@ -103,6 +104,69 @@ export let Animator = class {
     return true;
   }
 
+  _getSpringSettings(dock) {
+    let stiffness = dock.extension.animation_spring_stiffness ?? 0.55;
+    let damping = dock.extension.animation_spring_damping ?? 0.5;
+
+    stiffness = Math.max(0, Math.min(1, stiffness));
+    damping = Math.max(0, Math.min(1, damping));
+
+    return {
+      frequency: 4 + stiffness * 8,
+      dampingRatio: 0.6 + damping * 0.5,
+    };
+  }
+
+  _stepSpring(store, key, current, target, dtSeconds, spring, snapDistance) {
+    if (!store[key]) {
+      store[key] = {
+        value: current,
+        velocity: 0,
+      };
+    }
+
+    let state = store[key];
+    if (!Number.isFinite(state.value)) {
+      state.value = current;
+    }
+    if (!Number.isFinite(state.velocity)) {
+      state.velocity = 0;
+    }
+
+    if (!Number.isFinite(current)) {
+      current = target;
+    }
+
+    // Re-sync after actor rebuilds or external mutations so the spring does not
+    // jump from stale state.
+    if (Math.abs(current - state.value) > snapDistance * 12) {
+      state.value = current;
+      state.velocity = 0;
+    }
+
+    let steps = Math.max(1, Math.ceil(dtSeconds / ANIM_SPRING_MAX_TIMESTEP));
+    let stepDt = dtSeconds / steps;
+    let omega = 2 * Math.PI * spring.frequency;
+
+    for (let i = 0; i < steps; i++) {
+      let acceleration =
+        omega * omega * (target - state.value) -
+        2 * spring.dampingRatio * omega * state.velocity;
+      state.velocity += acceleration * stepDt;
+      state.value += state.velocity * stepDt;
+    }
+
+    if (
+      Math.abs(target - state.value) < snapDistance &&
+      Math.abs(state.velocity) < snapDistance
+    ) {
+      state.value = target;
+      state.velocity = 0;
+    }
+
+    return state.value;
+  }
+
   //! begin optimization
   animate(dt) {
     let dock = this.dock;
@@ -171,6 +235,9 @@ export let Animator = class {
 
     let animated = isWithin;
     dock.animated = animated;
+    let useSpring = dock.extension.animation_spring;
+    let dtSeconds = Math.max(dt, 0) / 1000;
+    let spring = useSpring ? this._getSpringSettings(dock) : null;
 
     let animateIcons = dock._icons;
     let iconSize = dock._iconSizeScaledDown;
@@ -441,6 +508,7 @@ export let Animator = class {
       if (icon._targetScale > 1.9) icon._targetScale = 2;
 
       icon._scale = icon._targetScale;
+      icon._spring = icon._spring || {};
 
       //! make these computation more readable even if more verbose
       let rdir =
@@ -459,7 +527,27 @@ export let Animator = class {
       //-------------------
       // animate position
       //-------------------
-      {
+      if (useSpring) {
+        translationX = this._stepSpring(
+          icon._spring,
+          'translationX',
+          icon._icon.translationX,
+          translationX,
+          dtSeconds,
+          spring,
+          0.05
+        );
+        translationY = this._stepSpring(
+          icon._spring,
+          'translationY',
+          icon._icon.translationY,
+          translationY,
+          dtSeconds,
+          spring,
+          0.05
+        );
+        icon._deltaVector = new Vector([translationX, translationY, 0]);
+      } else {
         let speed = ANIM_POSITION_PER_SEC * slowDown;
         let targetPosition = new Vector([translationX, translationY, 0]);
         let currentPosition = new Vector([
@@ -522,7 +610,7 @@ export let Animator = class {
         icon._positionCache = null;
       }
 
-      if (dock.animation_fps > 0) {
+      if (useSpring || dock.animation_fps > 0) {
         icon._icon.translationX = translationX;
         icon._icon.translationY = translationY;
       } else {
@@ -639,7 +727,19 @@ export let Animator = class {
         let unscaledIconSize = dock._iconSizeScaledDown * scaleFactor;
         let targetSize = unscaledIconSize * icon._targetScale;
         let currentSize = renderer.icon_size * renderer.scaleX;
-        {
+        if (useSpring) {
+          targetSize = this._stepSpring(
+            icon._spring,
+            'size',
+            currentSize,
+            targetSize,
+            dtSeconds,
+            spring,
+            0.02
+          );
+          icon._deltaSize = targetSize - currentSize;
+          icon._targetSize = targetSize;
+        } else {
           let dst = targetSize - currentSize;
           let mag = Math.abs(dst);
           let dir = Math.sign(dst);

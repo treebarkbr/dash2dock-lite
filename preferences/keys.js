@@ -256,6 +256,21 @@ export const SettingsKeys = () => {
       widget_type: 'scale',
       test: { pointer: 'slide-through', values: [0, 0.5, 1] },
     },
+    'animation-spring': {
+      default_value: true,
+      widget_type: 'switch',
+      test: { pointer: 'slide-through' },
+    },
+    'animation-spring-stiffness': {
+      default_value: 0.55,
+      widget_type: 'scale',
+      test: { pointer: 'slide-through', values: [0, 0.55, 1] },
+    },
+    'animation-spring-damping': {
+      default_value: 0.5,
+      widget_type: 'scale',
+      test: { pointer: 'slide-through', values: [0, 0.5, 1] },
+    },
     'animation-rise-curve': {
       default_value: 0,
       widget_type: 'dropdown',
