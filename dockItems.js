@@ -355,27 +355,42 @@ export const DockBackground = GObject.registerClass(
       });
     }
 
-    _getActorBounds(actor) {
-      let position = actor?.get_transformed_position?.();
-      let size = actor?.get_transformed_size?.();
+    _getIconBounds(dock) {
+      let bounds = null;
 
-      if (
-        !position ||
-        !size ||
-        !Number.isFinite(position[0]) ||
-        !Number.isFinite(position[1]) ||
-        !Number.isFinite(size[0]) ||
-        !Number.isFinite(size[1])
-      ) {
-        return null;
-      }
+      dock._icons?.forEach((icon) => {
+        let actor = icon._renderer ?? icon._icon;
+        let position = actor?.get_transformed_position?.();
+        let size = actor?.get_transformed_size?.();
 
-      return {
-        x1: position[0],
-        y1: position[1],
-        x2: position[0] + size[0],
-        y2: position[1] + size[1],
-      };
+        if (
+          !position ||
+          !size ||
+          !Number.isFinite(position[0]) ||
+          !Number.isFinite(position[1]) ||
+          !Number.isFinite(size[0]) ||
+          !Number.isFinite(size[1])
+        ) {
+          return;
+        }
+
+        let x1 = position[0];
+        let y1 = position[1];
+        let x2 = x1 + size[0];
+        let y2 = y1 + size[1];
+
+        if (!bounds) {
+          bounds = { x1, y1, x2, y2 };
+          return;
+        }
+
+        bounds.x1 = Math.min(bounds.x1, x1);
+        bounds.y1 = Math.min(bounds.y1, y1);
+        bounds.x2 = Math.max(bounds.x2, x2);
+        bounds.y2 = Math.max(bounds.y2, y2);
+      });
+
+      return bounds;
     }
 
     update(params) {
@@ -440,19 +455,29 @@ export const DockBackground = GObject.registerClass(
         this.y -= dock.y;
         this._padding = padding;
 
-        // Match start/end padding to the cross-axis padding around icons.
-        let firstBounds = this._getActorBounds(first._renderer ?? first._icon);
-        let lastBounds = this._getActorBounds(last._renderer ?? last._icon);
+        // Preserve the original cross-axis padding, then apply it equally
+        // around the full icon group. Separators are not part of dock._icons.
+        let az = -padding;
+        this.x += az / 2;
+        this.width -= az * (1 + !vertical);
+        this.y += az / 2;
+        this.height -= az * (1 + vertical);
 
-        if (firstBounds && lastBounds) {
+        let iconBounds = this._getIconBounds(dock);
+
+        if (iconBounds) {
           if (vertical) {
-            let leftPadding = Math.max(0, firstBounds.x1 - (dock.x + this.x));
-            this.y = firstBounds.y1 - leftPadding - dock.y;
-            this.height = lastBounds.y2 - firstBounds.y1 + leftPadding * 2;
+            let sidePadding = Math.max(0, iconBounds.x1 - (dock.x + this.x));
+            this.x = iconBounds.x1 - sidePadding - dock.x;
+            this.width = iconBounds.x2 - iconBounds.x1 + sidePadding * 2;
+            this.y = iconBounds.y1 - sidePadding - dock.y;
+            this.height = iconBounds.y2 - iconBounds.y1 + sidePadding * 2;
           } else {
-            let topPadding = Math.max(0, firstBounds.y1 - (dock.y + this.y));
-            this.x = firstBounds.x1 - topPadding - dock.x;
-            this.width = lastBounds.x2 - firstBounds.x1 + topPadding * 2;
+            let topPadding = Math.max(0, iconBounds.y1 - (dock.y + this.y));
+            this.x = iconBounds.x1 - topPadding - dock.x;
+            this.width = iconBounds.x2 - iconBounds.x1 + topPadding * 2;
+            this.y = iconBounds.y1 - topPadding - dock.y;
+            this.height = iconBounds.y2 - iconBounds.y1 + topPadding * 2;
           }
         }
 
