@@ -4,6 +4,7 @@ import Shell from 'gi://Shell';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Clutter from 'gi://Clutter';
+import { ShaderShim } from './shader-compat.js';
 
 const shaderSourceCache = new Map();
 
@@ -28,7 +29,7 @@ export const getShaderSource = (extensionDir, filename) => {
 
 export const ColorShaderEffect = GObject.registerClass(
   {},
-  class ColorShaderEffect extends Clutter.ShaderEffect {
+  class ColorShaderEffect extends ShaderShim {
     _init(params = {}, shaderFilename = '') {
       this._red = null;
       this._green = null;
